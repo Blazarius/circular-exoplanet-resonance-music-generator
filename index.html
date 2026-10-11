@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exoplanet Resonance Music Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            min-width: 300px;
+        }
+
+        #controls h3 {
+            margin-bottom: 15px;
+            color: #ffa500;
+            font-size: 18px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #7b68ee;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #4a90e2, #7b68ee);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(123, 104, 238, 0.4);
+        }
+
+        #resonanceDisplay {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #0ff;
+        }
+
+        #mySystems {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        #mySystems h4 {
+            margin-bottom: 10px;
+            color: #ffa500;
+        }
+
+        .system-item {
+            display: inline-block;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .system-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            min-width: 280px;
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+            color: #ffa500;
+        }
+
+        .modal input, .modal select {
+            margin: 10px 0;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 270px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #aaa;
+        }
+
+        #instructions h4 {
+            color: #ffa500;
+            margin-bottom: 10px;
+        }
+
+        .star-glow {
+            filter: url(#glow);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div id="controls">
+        <h3>🌟 Exoplanet Music Generator</h3>
+        <div class="control-group">
+            <button onclick="clearSystem()">Clear System</button>
+            <button onclick="togglePlay()">Play/Pause</button>
+        </div>
+        <div id="resonanceDisplay">
+            Orbital Resonance: <span id="resonanceRatio">-</span>
+        </div>
+        <div class="control-group">
+            <label>Playback Speed: <span id="speedValue">1.0x</span></label>
+            <input type="range" id="speedSlider" min="0.05" max="3" step="0.05" value="1" oninput="updateSpeed(this.value)">
+        </div>
+    </div>
+
+    <div id="instructions">
+        <h4>How to Play:</h4>
+        • Click empty space near the star to add a planet — its orbit is placed automatically by its ratio, and you pick its sound &amp; pitch<br>
+        • Drag a planet's icon to move it — its ratio updates to match<br>
+        • Double-click near an orbit ring to edit that planet's pitch &amp; sound<br>
+        • Hold (~2s) on an orbit ring to delete that planet<br>
+        • Press Enter to name &amp; save the system<br>
+        • Max 7 planets per star
+    </div>
+
+    <div id="mySystems">
+        <h4>My Systems</h4>
+        <div id="systemsList"></div>
+    </div>
+
+    <div id="addPlanetModal" class="modal">
+        <h3>Add New Planet</h3>
+        <label>Orbital Period Ratio:</label>
+        <input type="number" id="orbitRatio" min="0.5" max="10" step="0.1" value="1">
+        <label>Pitch (Hz):</label>
+        <input type="number" id="planetPitch" min="100" max="800" step="10" value="440">
+        <label>Sound Type:</label>
+        <select id="planetSoundType"></select>
+        <br>
+        <button onclick="confirmAddPlanet()">Add Planet</button>
+        <button onclick="cancelAddPlanet()">Cancel</button>
+    </div>
+
+    <div id="editPlanetModal" class="modal">
+        <h3>Edit Planet</h3>
+        <label>New Pitch (Hz):</label>
+        <input type="number" id="editPitch" min="100" max="800" step="10" value="440">
+        <label>Sound Type:</label>
+        <select id="editSoundType"></select>
+        <br>
+        <button onclick="confirmEditPlanet()">Update</button>
+        <button onclick="cancelEditPlanet()">Cancel</button>
+    </div>
+
+    <div id="saveSystemModal" class="modal">
+        <h3>Save System</h3>
+        <label>System Name:</label>
+        <input type="text" id="systemNameInput" placeholder="My System">
+        <br>
+        <button onclick="confirmSaveSystem()">Save &amp; New System</button>
+        <button onclick="cancelSaveSystem()">Cancel</button>
+    </div>
+
+    <svg width="0" height="0">
+        <defs>
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let audioContext;
+        let planets = [];
+        let savedSystems = [];
+        let isPlaying = true;
+        let playbackSpeed = 1.0;
+        let pendingPlanet = null;
+        let editingPlanet = null;
+        let draggedPlanet = null;
+        let mousePos = { x: 0, y: 0 };
+
+        // Orbit-hold (delete) state
+        let holdTimer = null;
+        let holdTargetPlanet = null;
+        let holdStartTime = 0;
+        const HOLD_DURATION = 2000;
+        const ORBIT_TOLERANCE = 15;
+        const ADD_MIN_DIST = 45;
+
+        // Orbit radius <-> orbital ratio mapping (Kepler's third law inspired: a ∝ T^(2/3))
+        // so higher-ratio planets are always placed further out, lower ratios closer in,
+        // and identical ratios always land on the exact same ring.
+        const RATIO_MIN = 0.5;
+        const RATIO_MAX = 10;
+        const ORBIT_MIN_RADIUS = 70;
+        const ORBIT_MAX_RADIUS = 340;
+
+        function ratioToRadius(ratio) {
+            const r = Math.min(Math.max(ratio, RATIO_MIN), RATIO_MAX);
+            const p0 = Math.pow(RATIO_MIN, 2 / 3);
+            const p1 = Math.pow(RATIO_MAX, 2 / 3);
+            const t = (Math.pow(r, 2 / 3) - p0) / (p1 - p0);
+            return ORBIT_MIN_RADIUS + t * (ORBIT_MAX_RADIUS - ORBIT_MIN_RADIUS);
+        }
+
+        function radiusToRatio(radius) {
+            const r = Math.min(Math.max(radius, ORBIT_MIN_RADIUS), ORBIT_MAX_RADIUS);
+            const t = (r - ORBIT_MIN_RADIUS) / (ORBIT_MAX_RADIUS - ORBIT_MIN_RADIUS);
+            const p0 = Math.pow(RATIO_MIN, 2 / 3);
+            const p1 = Math.pow(RATIO_MAX, 2 / 3);
+            const pow = p0 + t * (p1 - p0);
+            return Math.pow(pow, 3 / 2);
+        }
+
+        function initialAngleFor(orbitRadius) {
+            const sharing = planets.filter(p => Math.abs(p.orbitRadius - orbitRadius) < 2);
+            return sharing.length * 0.35;
+        }
+
+        // Sound type definitions (used to populate the per-planet dropdowns)
+        const SOUND_TYPES = [
+            { id: 'default', label: 'Default (Pure sine tone)' },
+            { id: 'magnetic', label: 'Magnetic (Metallic FM shimmer)' },
+            { id: 'strings', label: 'Strings (Warm detuned bowed tone)' },
+            { id: 'flute', label: 'Flute (Soft triangle with vibrato)' },
+            { id: 'bell', label: 'Bell (Bright layered chime)' },
+            { id: 'pad', label: 'Pad (Slow ambient swell)' }
+        ];
+
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        // Safe entry point for every planet sound: never lets an audio problem
+        // break the animation loop, and never queues sounds on a suspended context
+        function synthesizeSound(type, pitch) {
+            if (!audioContext) return;
+            if (audioContext.state !== 'running') {
+                audioContext.resume();
+                return;
+            }
+            try {
+                playVoice(type, pitch);
+            } catch (err) {
+                console.error('Sound error:', err);
+            }
+        }
+
+        // Standalone synth engine
+        function playVoice(type, pitch) {
+            const t0 = audioContext.currentTime;
+
+            switch (type) {
+                case 'magnetic': {
+                    const carrier = audioContext.createOscillator();
+                    const modulator = audioContext.createOscillator();
+                    const modGain = audioContext.createGain();
+                    const gain = audioContext.createGain();
+
+                    carrier.type = 'sine';
+                    carrier.frequency.setValueAtTime(pitch, t0);
+
+                    modulator.type = 'square';
+                    modulator.frequency.setValueAtTime(pitch * 1.5, t0);
+                    modGain.gain.setValueAtTime(pitch * 0.8, t0);
+                    modGain.gain.exponentialRampToValueAtTime(1, t0 + 1.2);
+
+                    modulator.connect(modGain);
+                    modGain.connect(carrier.frequency);
+
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.18, t0 + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.6);
+
+                    carrier.connect(gain);
+                    gain.connect(audioContext.destination);
+
+                    modulator.start(t0); carrier.start(t0);
+                    modulator.stop(t0 + 1.6); carrier.stop(t0 + 1.6);
+                    break;
+                }
+                case 'strings': {
+                    const gain = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1800, t0);
+
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.15, t0 + 0.4);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2.8);
+
+                    filter.connect(gain);
+                    gain.connect(audioContext.destination);
+
+                    [-6, 6].forEach(detune => {
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(pitch, t0);
+                        osc.detune.setValueAtTime(detune, t0);
+                        osc.connect(filter);
+                        osc.start(t0);
+                        osc.stop(t0 + 2.8);
+                    });
+                    break;
+                }
+                case 'flute': {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    const vibrato = audioContext.createOscillator();
+                    const vibratoGain = audioContext.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(pitch, t0);
+
+                    vibrato.type = 'sine';
+                    vibrato.frequency.setValueAtTime(5, t0);
+                    vibratoGain.gain.setValueAtTime(4, t0);
+                    vibrato.connect(vibratoGain);
+                    vibratoGain.connect(osc.frequency);
+
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.16, t0 + 0.25);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2.2);
+
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+
+                    vibrato.start(t0); osc.start(t0);
+                    vibrato.stop(t0 + 2.2); osc.stop(t0 + 2.2);
+                    break;
+                }
+                case 'bell': {
+                    const gain = audioContext.createGain();
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.2, t0 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2.5);
+                    gain.connect(audioContext.destination);
+
+                    [1, 2.4, 3.8].forEach((mult, i) => {
+                        const osc = audioContext.createOscillator();
+                        const partialGain = audioContext.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(pitch * mult, t0);
+                        partialGain.gain.setValueAtTime(1 / (i + 1), t0);
+                        osc.connect(partialGain);
+                        partialGain.connect(gain);
+                        osc.start(t0);
+                        osc.stop(t0 + 2.5);
+                    });
+                    break;
+                }
+                case 'pad': {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(pitch, t0);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(400, t0);
+                    filter.frequency.linearRampToValueAtTime(2200, t0 + 1.5);
+
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.13, t0 + 0.8);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 3.5);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioContext.destination);
+
+                    osc.start(t0);
+                    osc.stop(t0 + 3.5);
+                    break;
+                }
+                default: {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(pitch, t0);
+
+                    gain.gain.setValueAtTime(0, t0);
+                    gain.gain.linearRampToValueAtTime(0.2, t0 + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2);
+
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+
+                    osc.start(t0);
+                    osc.stop(t0 + 2);
+                }
+            }
+        }
+
+        function populateSoundSelects() {
+            const addSelect = document.getElementById('planetSoundType');
+            const editSelect = document.getElementById('editSoundType');
+            addSelect.innerHTML = '';
+            editSelect.innerHTML = '';
+
+            SOUND_TYPES.forEach(st => {
+                const opt1 = document.createElement('option');
+                opt1.value = st.id;
+                opt1.textContent = st.label;
+                addSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = st.id;
+                opt2.textContent = st.label;
+                editSelect.appendChild(opt2);
+            });
+        }
+
+        // Planet class
+        class Planet {
+            constructor(orbitRadius, ratio, pitch, angle = 0, soundType = 'default') {
+                this.orbitRadius = orbitRadius;
+                this.ratio = ratio;
+                this.pitch = pitch;
+                this.angle = angle;
+                this.startAngle = angle;
+                this.fireOnStart = (angle === 0);
+                this.soundType = soundType;
+                this.baseSpeed = 0.01;
+                this.speed = this.baseSpeed / ratio;
+                this.radius = 8 + Math.random() * 4;
+                this.color = this.generateColor();
+                this.brightness = 0;
+                this.lastTransit = false;
+                this.id = Date.now() + Math.random();
+            }
+
+            generateColor() {
+                const colors = [
+                    '#4a90e2', '#7b68ee', '#ff6b6b', '#4ecdc4', 
+                    '#ffd93d', '#6bcf7f', '#ff9999'
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            update() {
+                if (isPlaying) {
+                    // A planet that starts on the start line sounds once right away
+                    if (this.fireOnStart) {
+                        this.fireOnStart = false;
+                        this.playSound();
+                        this.brightness = 1;
+                    }
+
+                    // Advance, and detect the start-line crossing by the angle wrapping
+                    // past a full orbit (reliable at any speed, unlike a narrow angle window)
+                    this.angle += this.speed * playbackSpeed;
+                    if (this.angle >= Math.PI * 2) {
+                        this.angle -= Math.PI * 2;
+                        this.playSound();
+                        this.brightness = 1;
+                    }
+
+                    // Fade brightness
+                    this.brightness = Math.max(0, this.brightness - 0.02);
+                }
+            }
+
+            playSound() {
+                synthesizeSound(this.soundType, this.pitch);
+            }
+
+            draw() {
+                // Draw orbit ring — bright and crisp so it reads clearly against the starfield
+                ctx.save();
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = 'rgba(255, 175, 90, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 195, 120, 0.55)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, this.orbitRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                // Calculate planet position
+                const x = star.x + Math.cos(this.angle) * this.orbitRadius;
+                const y = star.y + Math.sin(this.angle) * this.orbitRadius;
+
+                // Draw planet with glow effect
+                if (this.brightness > 0) {
+                    ctx.shadowBlur = 20 * this.brightness;
+                    ctx.shadowColor = this.color;
+                }
+                
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, this.radius);
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(1, this.brightness > 0 ? 
+                    this.color + 'ff' : this.color + '88');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, this.radius + this.brightness * 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+            }
+
+            // Exact planet icon hit test (for dragging)
+            isClicked(x, y) {
+                const px = star.x + Math.cos(this.angle) * this.orbitRadius;
+                const py = star.y + Math.sin(this.angle) * this.orbitRadius;
+                const dist = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+                return dist < this.radius + 10;
+            }
+
+            // Anywhere along the orbit ring, regardless of where the planet currently is
+            orbitDistance(x, y) {
+                const dist = Math.sqrt((x - star.x) ** 2 + (y - star.y) ** 2);
+                return Math.abs(dist - this.orbitRadius);
+            }
+
+            isNearOrbit(x, y, tolerance = ORBIT_TOLERANCE) {
+                return this.orbitDistance(x, y) < tolerance;
+            }
+        }
+
+        // Find the planet whose orbit ring is closest to (x,y), within tolerance
+        function findNearestOrbitPlanet(x, y, tolerance = ORBIT_TOLERANCE) {
+            let closest = null;
+            let closestDiff = Infinity;
+            for (let planet of planets) {
+                const diff = planet.orbitDistance(x, y);
+                if (diff < tolerance && diff < closestDiff) {
+                    closest = planet;
+                    closestDiff = diff;
+                }
+            }
+            return closest;
+        }
+
+        // Star properties
+        const star = {
+            x: 0,
+            y: 0,
+            radius: 30,
+            glow: 0
+        };
+
+        // Setup canvas
+        function setupCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            star.x = canvas.width / 2;
+            star.y = canvas.height / 2;
+        }
+
+        // Draw starfield background
+        function drawStarfield() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars
+            for (let i = 0; i < 200; i++) {
+                const x = (i * 997) % canvas.width;
+                const y = (i * 491) % canvas.height;
+                const size = ((i * 7) % 3) * 0.5 + 0.5;
+                const brightness = ((i * 13) % 100) / 100;
+                
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Draw star
+        function drawStar() {
+            // Pulsing glow effect
+            star.glow = Math.sin(Date.now() * 0.001) * 0.2 + 0.8;
+            
+            // Draw star glow
+            const gradient = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.radius * 3);
+            gradient.addColorStop(0, 'rgba(255, 200, 100, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 180, 80, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 150, 50, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius * 3 * star.glow, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw star core
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw start line
+        function drawStartLine() {
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(star.x + 50, star.y);
+            ctx.lineTo(star.x + 350, star.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Draw delete-hold progress ring on the orbit being held
+        function drawHoldProgress() {
+            if (!holdTargetPlanet) return;
+            const elapsed = Date.now() - holdStartTime;
+            const progress = Math.min(elapsed / HOLD_DURATION, 1);
+
+            // Highlight the whole orbit ring in red, fading in with progress
+            ctx.strokeStyle = `rgba(255, 80, 80, ${0.2 + progress * 0.6})`;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, holdTargetPlanet.orbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Progress arc at the mouse position
+            ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(mousePos.x, mousePos.y, 16, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Update resonance display
+        function updateResonanceDisplay() {
+            if (planets.length === 0) {
+                document.getElementById('resonanceRatio').textContent = '-';
+                return;
+            }
+            
+            const sortedPlanets = [...planets].sort((a, b) => a.orbitRadius - b.orbitRadius);
+            const ratios = sortedPlanets.map(p => p.ratio.toFixed(1));
+            document.getElementById('resonanceRatio').textContent = ratios.join(':');
+        }
+
+        // Animation loop
+        function animate() {
+            drawStarfield();
+            drawStar();
+            drawStartLine();
+            
+            planets.forEach(planet => {
+                planet.update();
+                planet.draw();
+            });
+
+            drawHoldProgress();
+            
+            requestAnimationFrame(animate);
+        }
+
+        function cancelHold() {
+            if (holdTimer) {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            }
+            holdTargetPlanet = null;
+        }
+
+        function anyModalOpen() {
+            return document.getElementById('addPlanetModal').style.display === 'block' ||
+                   document.getElementById('editPlanetModal').style.display === 'block' ||
+                   document.getElementById('saveSystemModal').style.display === 'block';
+        }
+
+        // Event handlers
+        canvas.addEventListener('click', (e) => {
+            if (draggedPlanet || anyModalOpen()) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Don't add a planet if the click is on an existing planet icon or near an existing orbit
+            for (let planet of planets) {
+                if (planet.isClicked(x, y) || planet.isNearOrbit(x, y)) {
+                    return;
+                }
+            }
+            
+            // Add new planet if under limit
+            if (planets.length < 7) {
+                const dist = Math.sqrt((x - star.x) ** 2 + (y - star.y) ** 2);
+                if (dist > ADD_MIN_DIST) {
+                    pendingPlanet = {};
+                    document.getElementById('addPlanetModal').style.display = 'block';
+                }
+            }
+        });
+
+        // Double-click near an orbit ring -> edit that planet's pitch & sound
+        canvas.addEventListener('dblclick', (e) => {
+            if (anyModalOpen()) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const target = findNearestOrbitPlanet(x, y);
+            if (target) {
+                cancelHold();
+                editingPlanet = target;
+                document.getElementById('editPitch').value = target.pitch;
+                document.getElementById('editSoundType').value = target.soundType || 'default';
+                document.getElementById('editPlanetModal').style.display = 'block';
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (anyModalOpen()) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Exact planet icon -> drag to reposition
+            for (let planet of planets) {
+                if (planet.isClicked(x, y)) {
+                    draggedPlanet = planet;
+                    return;
+                }
+            }
+
+            // Anywhere else near an orbit ring -> hold ~2s to delete
+            const target = findNearestOrbitPlanet(x, y);
+            if (target) {
+                holdTargetPlanet = target;
+                holdStartTime = Date.now();
+                holdTimer = setTimeout(() => {
+                    const idx = planets.indexOf(target);
+                    if (idx !== -1) {
+                        planets.splice(idx, 1);
+                        updateResonanceDisplay();
+                    }
+                    cancelHold();
+                }, HOLD_DURATION);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+            
+            if (draggedPlanet) {
+                const dist = Math.sqrt((mousePos.x - star.x) ** 2 + (mousePos.y - star.y) ** 2);
+                const clamped = Math.min(Math.max(dist, ORBIT_MIN_RADIUS), ORBIT_MAX_RADIUS);
+                draggedPlanet.orbitRadius = clamped;
+                draggedPlanet.ratio = Math.round(radiusToRatio(clamped) * 100) / 100;
+                draggedPlanet.speed = draggedPlanet.baseSpeed / draggedPlanet.ratio;
+
+                planets.sort((a, b) => a.orbitRadius - b.orbitRadius);
+                updateResonanceDisplay();
+                return;
+            }
+
+            // Cancel a pending delete-hold if the pointer drifts off that orbit ring
+            if (holdTargetPlanet && !holdTargetPlanet.isNearOrbit(mousePos.x, mousePos.y, ORBIT_TOLERANCE * 1.5)) {
+                cancelHold();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            cancelHold();
+            draggedPlanet = null;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            cancelHold();
+            draggedPlanet = null;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+
+            const active = document.activeElement;
+
+            // Enter inside the save-system name field confirms the save
+            if (active && active.id === 'systemNameInput') {
+                e.preventDefault();
+                confirmSaveSystem();
+                return;
+            }
+
+            // Don't hijack Enter while another modal is open or while typing in a field
+            if (anyModalOpen()) return;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) return;
+
+            if (planets.length === 0) return;
+            openSaveSystemModal();
+        });
+
+        // Control functions
+        function confirmAddPlanet() {
+            if (!pendingPlanet) return;
+            
+            initAudio();
+            const ratio = parseFloat(document.getElementById('orbitRatio').value);
+            const pitch = parseFloat(document.getElementById('planetPitch').value);
+            const soundType = document.getElementById('planetSoundType').value;
+
+            const orbitRadius = ratioToRadius(ratio);
+            const angle = initialAngleFor(orbitRadius);
+            
+            const planet = new Planet(orbitRadius, ratio, pitch, angle, soundType);
+            planets.push(planet);
+            planets.sort((a, b) => a.orbitRadius - b.orbitRadius);
+            
+            updateResonanceDisplay();
+            document.getElementById('addPlanetModal').style.display = 'none';
+            pendingPlanet = null;
+        }
+
+        function cancelAddPlanet() {
+            document.getElementById('addPlanetModal').style.display = 'none';
+            pendingPlanet = null;
+        }
+
+        function confirmEditPlanet() {
+            if (!editingPlanet) return;
+            
+            editingPlanet.pitch = parseFloat(document.getElementById('editPitch').value);
+            editingPlanet.soundType = document.getElementById('editSoundType').value;
+            document.getElementById('editPlanetModal').style.display = 'none';
+            editingPlanet = null;
+        }
+
+        function cancelEditPlanet() {
+            document.getElementById('editPlanetModal').style.display = 'none';
+            editingPlanet = null;
+        }
+
+        function clearSystem() {
+            planets = [];
+            updateResonanceDisplay();
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+        }
+
+        function updateSpeed(value) {
+            playbackSpeed = parseFloat(value);
+            document.getElementById('speedValue').textContent = playbackSpeed.toFixed(2) + 'x';
+        }
+
+        function openSaveSystemModal() {
+            const input = document.getElementById('systemNameInput');
+            input.value = `System ${savedSystems.length + 1}`;
+            document.getElementById('saveSystemModal').style.display = 'block';
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 0);
+        }
+
+        function confirmSaveSystem() {
+            const input = document.getElementById('systemNameInput');
+            const name = input.value.trim() || `System ${savedSystems.length + 1}`;
+            saveSystem(name);
+            clearSystem();
+            document.getElementById('saveSystemModal').style.display = 'none';
+        }
+
+        function cancelSaveSystem() {
+            document.getElementById('saveSystemModal').style.display = 'none';
+        }
+
+        function saveSystem(name) {
+            const system = {
+                name: name || `System ${savedSystems.length + 1}`,
+                planets: planets.map(p => ({
+                    orbitRadius: p.orbitRadius,
+                    ratio: p.ratio,
+                    pitch: p.pitch,
+                    angle: p.startAngle,
+                    soundType: p.soundType
+                })),
+                timestamp: Date.now()
+            };
+            
+            savedSystems.push(system);
+            updateSystemsList();
+        }
+
+        function loadSystem(index) {
+            if (index < 0 || index >= savedSystems.length) return;
+            
+            const system = savedSystems[index];
+            planets = system.planets.map(p => 
+                new Planet(p.orbitRadius, p.ratio, p.pitch, p.angle || 0, p.soundType || 'default')
+            );
+            updateResonanceDisplay();
+        }
+
+        function updateSystemsList() {
+            const list = document.getElementById('systemsList');
+            list.innerHTML = '';
+            
+            savedSystems.forEach((system, index) => {
+                const item = document.createElement('div');
+                item.className = 'system-item';
+                item.textContent = system.name;
+                item.onclick = () => loadSystem(index);
+                list.appendChild(item);
+            });
+        }
+
+        // Initialize
+        window.addEventListener('resize', setupCanvas);
+        setupCanvas();
+        // Browsers keep audio locked until the user interacts; unlock/resume on any gesture
+        ['pointerdown', 'keydown'].forEach(evt => {
+            document.addEventListener(evt, initAudio);
+        });
+        populateSoundSelects();
+        animate();
+
+        // Add example system, showcasing a few different sound types
+        setTimeout(() => {
+            planets.push(new Planet(ratioToRadius(1), 1, 440, 0, 'default'));
+            planets.push(new Planet(ratioToRadius(1.5), 1.5, 330, 0, 'strings'));
+            planets.push(new Planet(ratioToRadius(2), 2, 220, 0, 'flute'));
+            updateResonanceDisplay();
+        }, 500);
+    </script>
+</body>
+</html>
